@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Heritage of Rome</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <style>
+        /* —— Modern Tech-Museum (Sleek Dark + Glassy Blue) —— */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* === Theme variables: DARK is default (no class). LIGHT is applied via .light-mode on <body> === */
+:root{
+  /* DARK / Modern Tech-Museum defaults */
+  --bg-mid: linear-gradient(180deg,#071428 0%, #0b2033 60%, #0f2a3f 100%);
+  --page-bg: #071428;
+  --glass: rgba(255,255,255,0.03);
+  --card-bg: rgba(16,34,50,0.55);
+  --muted: #9fb7c8;
+  --accent: #2fc1ff;
+  --accent-2: #4aa3ff;
+  --border: rgba(255,255,255,0.06);
+  --shadow: 0 8px 30px rgba(2,10,20,0.6);
+  --glass-blur: 8px;
+  --footer-height: 64px;
+ --modal-bg: rgba(8,18,30,0.9);
+  /* Text & controls */
+  --text-color: #e6f3fb;        /* primary text in dark */
+  --muted-text: #9fb7c8;
+  --input-bg: rgba(10,20,30,0.45);
+  --btn-text: #021827;
+  --modal-bg: rgba(8,18,30,0.9);
+  --card-border-left: rgba(47,193,255,0.12);
+}
+
+/* === Light mode variables; applied when <body>.light-mode === */
+body.light-mode {
+  --bg-mid: linear-gradient(180deg,#eaf6ff 0%, #e6f4ff 100%);
+  --page-bg: #eaf6ff;
+  --glass: rgba(255,255,255,0.85);
+  --card-bg: rgba(255,255,255,0.96);
+  --muted: #274552;
+  --accent: #0e8bd1;      /* bright cyan-blue for light mode */
+  --accent-2: #5bb7ff;
+  --border: rgba(2,10,20,0.06);
+  --shadow: 0 8px 30px rgba(2,10,20,0.06);
+  --glass-blur: 8px;
+  --footer-height: 64px;
+  --modal-bg: rgba(255,255,255,0.96);
+
+  /* text/control overrides for light mode */
+  --text-color: #082630;
+  --muted-text: #32555a;
+  --input-bg: rgba(255,255,255,0.92);
+  --btn-text: #021827;
+  --modal-bg: rgba(255,255,255,0.96);
+  --card-border-left: rgba(14,139,209,0.10);
+}
+
+.close-modal {
+  cursor: pointer;
+}
+body.light-mode .modal-content {
+  background: rgba(255,255,255,0.98) !important;
+  color: #082630 !important;
+}
+
+body.light-mode .modal {
+  background: rgba(255,255,255,0.85) !important;
+}
+/* Apply variables site-wide */
+body {
+  font-family: "Times New Roman", serif;
+  background: var(--bg-mid);
+  color: var(--text-color);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  line-height: 1.55;
+  padding-bottom: var(--footer-height); /* prevents overlap with fixed footer */
+}
+
+/* Example elements (make sure these selectors exist in your CSS and use the vars) */
+
+.header{
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(var(--glass-blur));
+  box-shadow: 0 6px 20px rgba(3,12,24,0.6);
+  color: var(--text-color);
+}
+
+.header h1 { color: var(--accent); }
+.header p  { color: var(--muted-text); }
+
+/* Sidebar / cards / map etc. use variables */
+.sidebar{
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-right: 1px solid var(--border);
+  color: var(--text-color);
+}
+
+.search-box{
+  background: var(--input-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border);
+}
+
+.location-card{
+  background: var(--card-bg);
+  color: var(--text-color);
+  border-left: 3px solid var(--card-border-left);
+  box-shadow: var(--shadow);
+}
+
+.layer-control { background: rgba(8,18,30,0.58); color: var(--muted-text); border: 1px solid var(--border); }
+
+/* Modal & popup backgrounds */
+.modal-content{
+  background: var(--modal-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border);
+}
+
+/* Buttons using accent variables */
+.icon-btn,
+.doc-btn,
+.get-route-btn,
+.clear-route-btn,
+.refresh-facts-btn {
+  background: linear-gradient(90deg,var(--accent), var(--accent-2));
+  color: var(--btn-text);
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+/* Hover states (use slightly stronger accents) */
+.category-btn.active,
+.category-btn:hover {
+  background: linear-gradient(90deg,var(--accent),var(--accent-2));
+  color: var(--btn-text);
+}
+
+/* Footer safe area remains the same; it will inherit var colors */
+.footer-fixed{
+  background: linear-gradient(180deg, rgba(5,10,18,0.7), rgba(5,10,18,0.85));
+  border-top: 1px solid rgba(255,255,255,0.03);
+  /* in light mode, we override with softer light style */
+}
+body.light-mode .footer-fixed{
+  background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(250,250,250,0.98));
+  border-top: 1px solid rgba(2,10,20,0.04);
+}
+
+/* Accessibility: focus outlines */
+button:focus, .category-btn:focus, .search-box:focus { outline: 3px solid rgba(47,193,255,0.12); outline-offset: 2px; }
+
+/* Keep responsive rules as they were (no change needed) */
+
+/* Header - compact, centered, glassy */
+.header{
+  width: 100%;
+  max-height: 84px;               /* keep header compact */
+  padding: 12px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 1100;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(var(--glass-blur));
+  box-shadow: 0 6px 20px rgba(3,12,24,0.6);
+}
+
+/* Header title kept small and elegant */
+.header h1{
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #dff7ff;
+  letter-spacing: 0.6px;
+  margin-left: 6px;
+}
+
+/* Header subtitle / small descriptor */
+.header p{
+  color: var(--muted);
+  font-size: 0.92rem;
+  margin-left: 8px;
+  opacity: .95;
+}
+
+/* Header controls (icons/buttons) aligned right */
+.header-controls{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+/* Glassy icon buttons */
+.icon-btn{
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border: 1px solid rgba(47,193,255,0.12);
+  color: var(--accent);
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  box-shadow: 0 6px 20px rgba(2,10,20,0.45);
+  transition: transform .18s ease, box-shadow .18s ease, background .18s;
+}
+.icon-btn:hover{ transform: translateY(-3px); box-shadow: 0 14px 35px rgba(47,193,255,0.08); }
+
+/* Layout: sidebar + map */
+.container{
+  display:flex;
+  height: calc(100vh - 84px); /* account for compact header */
+  overflow: hidden;
+}
+
+/* Sidebar: frosted glass, scrollable */
+.sidebar{
+  width: 340px;
+  min-width: 260px;
+  max-width: 380px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-right: 1px solid var(--border);
+  padding: 20px;
+  overflow-y: auto;
+  box-shadow: 6px 0 30px rgba(2,8,18,0.55);
+  backdrop-filter: blur(10px) saturate(120%);
+}
+
+/* Map container stretches and is behind glass controls */
+.map-container{
+  flex:1;
+  position:relative;
+}
+
+/* Map full height, slight inset */
+#map{
+  width:100%;
+  height:100%;
+  display:block;
+  background: linear-gradient(180deg,#05101a 0%, #072234 100%);
+}
+
+/* Layer control: small glass card with soft neon outline */
+.layer-control{
+  position:absolute;
+  top:16px;
+  right:16px;
+  background: rgba(16, 34, 50, 0.85);
+  padding:12px 14px;
+  border-radius:10px;
+  border: 1px solid rgba(47,193,255,0.08);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+  color: var(--muted);
+  font-size:0.95rem;
+    z-index: 1000; 
+}
+body.light-mode .layer-control {
+  background: rgba(255, 255, 255, 0.95);  /* White background */
+  color: #082630;  /* Dark text */
+  border: 1px solid rgba(14, 139, 209, 0.3);  /* Blue border */
+}
+/* Sidebar inputs: sleek, minimal */
+.search-box{
+  width:100%;
+  padding:12px 14px;
+  border-radius:12px;
+  border: 1px solid rgba(255,255,255,0.04);
+  background: rgba(10,20,30,0.45);
+  color: #e8f7ff;
+  font-size: 15px;
+  outline: none;
+  transition: box-shadow .2s ease, border-color .2s ease;
+}
+.search-box:focus{
+  border-color: rgba(47,193,255,0.6);
+  box-shadow: 0 6px 20px rgba(47,193,255,0.06);
+}
+
+/* Category buttons: neon accent, compact */
+.category-btn{
+  padding:8px 12px;
+  margin:6px 6px 6px 0;
+  border-radius:8px;
+  background: rgba(12,22,34,0.55);
+  color: var(--muted);
+  border: 1px solid rgba(255,255,255,0.04);
+  cursor:pointer;
+  font-weight:600;
+}
+.category-btn.active,
+.category-btn:hover{
+  color: #041826;
+  background: linear-gradient(90deg,var(--accent),var(--accent-2));
+  box-shadow: 0 8px 26px rgba(47,193,255,0.08);
+  transform: translateY(-3px);
+}
+.modal-content{
+  width:min(920px,96%);
+  max-height:86vh;
+  overflow:auto;
+  background: var(--modal-bg);
+  border-radius:12px;
+  border: 1px solid var(--border);
+  padding:22px;
+  box-shadow: var(--shadow);
+  color: var(--text-color);
+  backdrop-filter: blur(12px) saturate(120%);
+}
+
+/* Location cards: sleek, elevated glass tiles */
+.location-card{
+  background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));
+  border-radius:12px;
+  padding:14px;
+  margin-bottom:14px;
+  border-left: 3px solid rgba(47,193,255,0.12);
+  box-shadow: 0 6px 20px rgba(2,8,18,0.5);
+  transition: transform .18s ease, box-shadow .18s ease;
+  cursor: pointer;
+  color: #e6f7ff;
+}
+.location-card:hover{
+  transform: translateY(-6px);
+  box-shadow: 0 18px 40px rgba(2,10,20,0.6);
+}
+.location-card h3{ color: var(--accent); font-size:1.05rem; margin-bottom:6px; }
+.location-card p{ color: var(--muted); font-size:0.93rem; }
+
+/* Popup / modal styling: dark glass */
+.modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background: linear-gradient(180deg, rgba(2,6,12,0.6), rgba(2,6,12,0.75));
+  z-index:1200;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+.modal-content{
+  width:min(920px,96%);
+  max-height:86vh;
+  overflow:auto;
+  background: linear-gradient(180deg, rgba(8,18,30,0.9), rgba(5,12,20,0.95));
+  border-radius:12px;
+  border: 1px solid rgba(47,193,255,0.06);
+  padding:22px;
+  box-shadow: 0 24px 60px rgba(2,10,20,0.75);
+  color: #e6faff;
+  backdrop-filter: blur(12px) saturate(120%);
+}
+
+/* Buttons inside modals and map controls */
+.doc-btn, .get-route-btn, .clear-route-btn, .refresh-facts-btn {
+  display:inline-block;
+  width:100%;
+  padding:10px 12px;
+  border-radius:10px;
+  border: none;
+  background: linear-gradient(90deg,var(--accent), var(--accent-2));
+  color: #021827;
+  font-weight:700;
+  cursor:pointer;
+  transition: transform .16s ease, box-shadow .16s ease;
+  margin-top:10px;
+}
+.doc-btn:hover, .get-route-btn:hover, .clear-route-btn:hover, .refresh-facts-btn:hover{
+  transform: translateY(-4px);
+  box-shadow: 0 16px 36px rgba(47,193,255,0.08);
+}
+
+/* Replace existing .nearby-item block with this so it respects light/dark variables */
+.nearby-item{
+  background: var(--card-bg);
+  padding:10px;
+  border-radius:8px;
+  margin-bottom:8px;
+  color: var(--text-color);
+  border-left: 3px solid var(--card-border-left);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.04);
+}
+
+/* optionally make items a bit more distinct in light mode (if you want) */
+body.light-mode .nearby-item {
+  box-shadow: 0 6px 18px rgba(2,8,18,0.04);
+}
+
+
+/* Facts cards 
+.fact-card{
+  background: rgba(255,255,255,0.02);
+  border-radius:10px;
+  padding:12px;
+  margin:12px 0;
+  border-left: 4px solid rgba(47,193,255,0.08);
+  color: #eaf8ff;
+}*/
+.fact-card{
+    background: var(--card-bg);
+    border-radius:10px;
+    padding:12px;
+    margin:12px 0;
+    border-left: 4px solid var(--card-border-left);
+    color: var(--text-color);
+}
+
+.fact-card h4 {
+    color: var(--accent);
+}
+
+.fact-card p {
+    color: var(--text-color);
+}
+/* Small helper */
+.coordinates { font-size:0.85rem; color: var(--muted); font-style:italic; }
+
+/* Footer: fixed single-option, centered, non-overlapping */
+.footer-fixed{
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--footer-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(5,10,18,0.7), rgba(5,10,18,0.85));
+  border-top: 1px solid rgba(255,255,255,0.03);
+  z-index: 1300;
+  backdrop-filter: blur(10px);
+  padding: 8px 16px;
+  box-shadow: 0 -8px 30px rgba(2,8,18,0.6);
+}
+
+/* Footer single action (won't overlap because body has bottom padding) */
+.footer-fixed .footer-action{
+  width: min(360px, 90%);
+  max-width: 420px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(47,193,255,0.08);
+  background: linear-gradient(90deg, rgba(47,193,255,0.14), rgba(74,163,255,0.08));
+  color: #dff9ff;
+  font-weight: 700;
+  text-align:center;
+  cursor:pointer;
+  box-shadow: 0 8px 30px rgba(47,193,255,0.06);
+}
+.footer-fixed .footer-action:hover{
+  transform: translateY(-3px);
+  box-shadow: 0 20px 50px rgba(47,193,255,0.08);
+}
+
+/* Make sure interactive elements have visible focus for accessibility */
+button:focus, .category-btn:focus, .search-box:focus { outline: 3px solid rgba(47,193,255,0.12); outline-offset: 2px; }
+
+/* Responsive tweaks */
+@media (max-width: 900px){
+  .sidebar { width: 300px; }
+  .header h1 { font-size:1.05rem; }
+  .header p { display:none; } /* keep header compact on small screens */
+}
+@media (max-width: 640px){
+  .container { flex-direction: column-reverse; height: auto; min-height: calc(100vh - 84px); }
+  #map { height: 55vh; }
+  .sidebar { width: 100%; max-height: 45vh; overflow-y:auto; border-right:none; border-bottom:1px solid rgba(255,255,255,0.03); }
+  .footer-fixed .footer-action { width: 92%; }
+}
+/* Strong, last-resort override: header color in light mode */
+body.light-mode .header h1 {
+  color: #0e8bd1;            /* desired light-mode color */
+  transition: color .22s ease;
+}
+/* --- Leaflet + custom popup sizing & layout fix --- */
+
+/* Limit the overall popup wrapper so it never overflows the map */
+.leaflet-popup-content-wrapper {
+  max-width: 460px;       /* how wide the popup may grow */
+  max-height: 80vh;       /* never exceed viewport height */
+  overflow: hidden;       /* children will handle scroll */
+  border-radius: 12px;
+  padding: 0;
+  background-clip: padding-box;
+}
+
+/* Make the inner content scroll if it's tall (image + text) */
+.leaflet-popup-content {
+  padding: 14px !important;
+  box-sizing: border-box;
+  max-height: 74vh;      /* a bit smaller than wrapper to allow for arrow/title */
+  overflow-y: auto;
+  color: var(--text-color); /* respects your theme variables */
+}
+
+/* Style the custom content inside (your .popup-content) */
+.popup-content {
+  width: 100%;
+  display: block;
+}
+
+/* Make images responsive inside popups */
+.popup-content img {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  display: block;
+  margin: 8px 0;
+  object-fit: cover;
+}
+
+/* Header/title inside popup */
+.popup-content h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.05rem;
+  color: var(--accent);
+}
+
+/* Ensure the popup close button stays visible and not overlapping */
+.leaflet-popup-close-button {
+  top: 8px;
+  right: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+  opacity: 0.95;
+}
+
+/* Optional: tighten the popup arrow so it doesn't push layout */
+.leaflet-popup-tip-container { height: 8px; }
+
+/* Fallback for any excessive leafet default width */
+.leaflet-popup {
+  max-width: 460px;
+}
+
+/* If you also use .modal-content elsewhere, keep it constrained too */
+.modal-content {
+  max-width: 820px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+/* Ensure popup text uses correct theme color */
+.leaflet-popup-content,
+.leaflet-popup-content p,
+.leaflet-popup-content h3,
+.leaflet-popup-content span {
+  color: var(--text-color) !important;
+}
+.leaflet-popup-content-wrapper {
+  max-width: 460px;
+  max-height: 80vh;
+  overflow: hidden;
+  border-radius: 12px;
+  padding: 0;
+  background: var(--modal-bg) !important;  /* Make sure this line exists */
+  color: var(--text-color) !important;      /* And this one */
+}
+.leaflet-popup-tip {
+  background: var(--modal-bg) !important;
+}
+
+body:not(.light-mode) .leaflet-popup-content,
+body:not(.light-mode) .leaflet-popup-content * {
+  color: #e6f3fb !important; /* dark-mode readable text */
+}
+
+
+/* Optional: slightly darker accent in light mode for readability */
+body.light-mode .leaflet-popup-content h3 {
+  color: var(--accent);
+}
+
+/* Optional: paragraph readability tuning */
+.leaflet-popup-content p {
+  line-height: 1.55;
+}
+body.light-mode .leaflet-popup-content,
+body.light-mode .leaflet-popup-content * {
+  color: #082630 !important; /* dark text for light mode */
+}
+    
+	.nearby-panel { z-index: 1200; }
+
+	
+	</style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏛️ Digital Heritage of Rome</h1>
+        <p>Explore Ancient Monuments & Artifacts</p>
+        <div class="header-controls">
+            <button class="icon-btn" onclick="showRandomFacts()" title="Rome Facts">💡 Facts</button>
+            <button class="icon-btn" onclick="findNearby()" title="Find Nearby">📍 Nearby</button>
+            <button class="icon-btn" onclick="toggleDarkMode()" id="themeToggle" title="Toggle Dark Mode">🌙</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <input type="text" class="search-box" id="searchBox" placeholder="Search locations...">
+            
+            <div class="category-filter">
+                <h3>Categories</h3>
+                <button class="category-btn active" data-category="all">All</button>
+                <button class="category-btn" data-category="monument">Monuments</button>
+                <button class="category-btn" data-category="artifact">Artifacts</button>
+            </div>
+
+            <div id="locationList"></div>
+
+            <div class="nearby-panel" id="nearbyPanel" style="display: none;">
+                <h4>📍 Nearby Locations</h4>
+                <div class="nearby-list" id="nearbyList"></div>
+            </div>
+
+            <div class="route-panel">
+                <h4>🗺️ Get Directions</h4>
+                <select class="route-input" id="startLocation">
+                    <option value="">Select Start Location</option>
+                </select>
+                <select class="route-input" id="endLocation">
+                    <option value="">Select End Location</option>
+                </select>
+                <button class="get-route-btn" onclick="getRoute()">Get Route</button>
+                <button class="clear-route-btn" id="clearRouteBtn" onclick="clearRoute()">Clear Route</button>
+            </div>
+			
+			<!--<div class="upload-section">
+                <h4>📸 Upload Photos</h4>
+                <input type="file" id="photoUpload" accept="image/*" multiple>
+                <button class="upload-btn" onclick="uploadPhotos()">Upload</button>
+            </div>-->
+
+			
+			
+			
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+            <div class="layer-control">
+                <h4>Map Layers</h4>
+                <div class="layer-option">
+                    <input type="radio" name="layer" value="streets" checked> Streets
+                </div>
+                <div class="layer-option">
+                    <input type="radio" name="layer" value="satellite"> Satellite
+                </div>
+                <div class="layer-option">
+                    <input type="radio" name="layer" value="terrain"> Terrain
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Documentation Modal -->
+    <div id="docModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeDocModal()">&times;</span>
+            <div id="docContent"></div>
+        </div>
+    </div>
+
+    <!-- Facts Modal -->
+    <div id="factsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeFactsModal()">&times;</span>
+            <div class="facts-container">
+                <h2>🏛️ Fascinating Facts About Rome</h2>
+                <div id="factsContent"></div>
+                <button class="refresh-facts-btn" onclick="refreshFacts()">🔄 Show More Facts</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script>
+         (function(){
+    const THEME_KEY = 'site-theme-preference'; // stores 'light' or 'dark'
+    const body = document.body;
+    const btn = document.getElementById('themeToggle');
+
+    // Helper to set button text/title based on current mode
+    function setBtn() {
+      if (body.classList.contains('light-mode')) {
+        // currently light -> show moon to allow switching to dark
+        btn.textContent = '🌙';
+        btn.title = 'Switch to dark theme';
+      } else {
+        // currently dark -> show sun to allow switching to light
+        btn.textContent = '☀️';
+        btn.title = 'Switch to light theme';
+      }
+    }
+
+    // On load: check stored user preference. Default = dark (no class).
+    const stored = localStorage.getItem(THEME_KEY);
+    if (stored === 'light') {
+      body.classList.add('light-mode');
+    } else {
+      body.classList.remove('light-mode'); // default dark
+    }
+    setBtn();
+
+    // Replace / override global toggleDarkMode() so your existing onclick keeps working
+    window.toggleDarkMode = function() {
+      const isLightNow = body.classList.toggle('light-mode');
+      // Persist choice: store 'light' if light-mode present, otherwise 'dark'
+      localStorage.setItem(THEME_KEY, isLightNow ? 'light' : 'dark');
+
+      // update button label/title
+      setBtn();
+
+      // optional: small visual nudge (pulse)
+      btn.animate([
+        { transform: 'scale(1)' },
+        { transform: 'scale(1.06)' },
+        { transform: 'scale(1)' }
+      ],{ duration: 240, easing: 'ease-out' });
+    };
+
+    // Make sure the close fallback exists
+    if (!btn) {
+      console.warn('themeToggle button not found — ensure element has id="themeToggle"');
+    }
+  })();
+// Heritage locations data
+        const locations = [
+            {
+                name: "Colosseum",
+                lat: 41.8902,
+                lng: 12.4922,
+                category: "monument",
+                description: "The Colosseum is an iconic symbol of Imperial Rome, built in 70-80 AD. This massive amphitheater could hold up to 80,000 spectators and hosted gladiatorial contests and public spectacles.",
+                image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400",
+                documentation: {
+                    history: "The Colosseum was commissioned by Emperor Vespasian in AD 72 and completed by his son Titus in AD 80. Built on the site of Nero's Golden House, it was designed to win public favor and demonstrate the power of the Flavian dynasty.",
+                    architecture: "The elliptical structure measures 189 meters long, 156 meters wide, and 48 meters high. It features three stories of arched entrances supported by columns in Doric, Ionic, and Corinthian orders. The arena floor covered an elaborate underground network of tunnels and chambers called the hypogeum.",
+                    significance: "As the largest amphitheater ever built, the Colosseum represents the pinnacle of Roman engineering and entertainment architecture. It hosted gladiatorial combats, animal hunts, executions, and naval battles for over 400 years.",
+                    preservation: "Despite damage from earthquakes and stone-robbers, the Colosseum remains an iconic symbol of Rome. Major restoration efforts began in the 1990s, and it was designated a UNESCO World Heritage Site in 1980."
+                }
+            },
+            {
+                name: "Roman Forum",
+                lat: 41.8925,
+                lng: 12.4853,
+                category: "monument",
+                description: "The Roman Forum was the center of Roman public life for centuries. This rectangular plaza was surrounded by ruins of important ancient government buildings and temples.",
+                image: "https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=400",
+                documentation: {
+                    history: "Originally a marshy valley between the Palatine and Capitoline Hills, the Forum was drained in the 7th century BC and became Rome's political, religious, and commercial center. It served as the heart of the Roman Republic and Empire.",
+                    architecture: "The Forum contains ruins of several important structures including the Temple of Saturn, the Arch of Titus, the Basilica of Maxentius, and the Curia Julia (Senate House). The Via Sacra, Rome's oldest road, runs through the Forum.",
+                    significance: "For over a millennium, the Forum was the stage for public speeches, criminal trials, gladiatorial matches, and commercial affairs. It was here that Julius Caesar was cremated and where triumphal processions concluded.",
+                    preservation: "Excavations began in the 19th century, revealing the layers of Roman history. Today, the Forum is one of the most important archaeological sites in the world, offering insights into ancient Roman civilization."
+                }
+            },
+            {
+                name: "Pantheon",
+                lat: 41.8986,
+                lng: 12.4768,
+                category: "monument",
+                description: "The Pantheon is a former Roman temple, now a church. Built around 126 AD, it features the world's largest unreinforced concrete dome and is remarkably well-preserved.",
+                image: "https://images.unsplash.com/photo-1555992336-fb0d29498b13?w=400",
+                documentation: {
+                    history: "Built by Emperor Hadrian between 118-128 AD, the Pantheon replaced an earlier temple commissioned by Marcus Agrippa. It was dedicated to all the gods of ancient Rome and later converted into a Christian church in 609 AD.",
+                    architecture: "The Pantheon's dome spans 43.3 meters and remains the world's largest unreinforced concrete dome. The oculus at the dome's center is 8.2 meters wide and serves as the building's only light source. The perfect proportions create a sphere that would fit exactly within the interior space.",
+                    significance: "The Pantheon represents the apex of Roman architectural achievement. Its innovative design influenced countless buildings throughout history, including many government buildings and museums worldwide.",
+                    preservation: "Thanks to its continuous use and conversion to a church, the Pantheon is the best-preserved of all Roman buildings. It has retained its original bronze doors and marble floor."
+                }
+            },
+            {
+                name: "Trevi Fountain",
+                lat: 41.9009,
+                lng: 12.4833,
+                category: "monument",
+                description: "The Trevi Fountain is the largest Baroque fountain in Rome. Completed in 1762, tradition holds that tossing a coin into the fountain ensures a return to Rome.",
+                image: "trevi.jpg",
+                documentation: {
+                    history: "The fountain stands at the terminus of the Aqua Virgo aqueduct, constructed in 19 BC. The present fountain was designed by Nicola Salvi and completed by Giuseppe Pannini in 1762 after 30 years of construction.",
+                    architecture: "The fountain is 26.3 meters high and 49.15 meters wide. The central figure is Oceanus, god of water, flanked by statues representing Abundance and Salubrity. The backdrop resembles a triumphal arch with Corinthian columns.",
+                    significance: "The Trevi Fountain is one of Rome's most famous landmarks and a masterpiece of Baroque art. The coin-tossing tradition generates approximately 3,000 euros daily, which is collected and donated to charity.",
+                    preservation: "A major restoration completed in 2015 cleaned centuries of grime and repaired the fountain's travertine stone and sculptural elements, restoring its original white appearance."
+                }
+            },
+            {
+                name: "Vatican Museums",
+                lat: 41.9065,
+                lng: 12.4536,
+                category: "artifact",
+                description: "The Vatican Museums house an immense collection of art and artifacts collected by the Catholic Church over centuries, including the Sistine Chapel ceiling by Michelangelo.",
+                image: "vetican.jpg",
+                documentation: {
+                    history: "Founded by Pope Julius II in the early 16th century, the Vatican Museums grew from the papal collection of sculptures. The museums have expanded over five centuries to become one of the world's largest museum complexes.",
+                    architecture: "The complex comprises 54 galleries covering 7 kilometers of exhibition space. Notable areas include the Sistine Chapel, Raphael Rooms, Gallery of Maps, and the Pio-Clementine Museum. The museums contain works spanning from ancient Egyptian artifacts to contemporary art.",
+                    significance: "The Vatican Museums house some of humanity's greatest artistic treasures, including Michelangelo's Sistine Chapel ceiling, Raphael's School of Athens, and the Apollo Belvedere sculpture. The collection represents the Catholic Church's patronage of the arts.",
+                    preservation: "Modern climate control systems protect the artworks, and visitor numbers are carefully managed. Digital documentation projects ensure these treasures are preserved for future generations."
+                }
+            },
+            {
+                name: "Castel Sant'Angelo",
+                lat: 41.9031,
+                lng: 12.4663,
+                category: "monument",
+                description: "Originally built as a mausoleum for Emperor Hadrian in 139 AD, Castel Sant'Angelo was later used as a fortress, castle, and papal residence.",
+                image: "castelsantangelo.jpg",
+                documentation: {
+                    history: "Construction began under Emperor Hadrian in 134 AD as a mausoleum for himself and his family. It was later converted into a military fortress in 401 AD and became a papal fortress connected to the Vatican by the Passetto di Borgo corridor in 1277.",
+                    architecture: "The cylindrical building sits on a square base, measuring 64 meters in height. The structure includes five floors, spiral ramps, and numerous rooms. The bronze statue of Archangel Michael crowns the summit, commemorating a vision of Pope Gregory I.",
+                    significance: "Castel Sant'Angelo served multiple roles throughout history: imperial tomb, fortress, prison, and papal residence. It witnessed many pivotal events in Roman and papal history, including the 1527 Sack of Rome.",
+                    preservation: "Now a museum, the castle displays its various historical phases. Visitors can explore the papal apartments, prison cells, and enjoy panoramic views of Rome from the terrace."
+                }
+            },
+            {
+                name: "Capitoline Museums",
+                lat: 41.8931,
+                lng: 12.4828,
+                category: "artifact",
+                description: "The Capitoline Museums contain collections of ancient Roman statues, inscriptions, and artifacts, making it one of the oldest public museums in the world.",
+                image: "capitoline.jpg",
+                documentation: {
+                    history: "Founded in 1471 when Pope Sixtus IV donated a collection of bronze statues to the Roman people, the Capitoline Museums are considered the world's oldest public museum. The collection expanded significantly during the Renaissance and Baroque periods.",
+                    architecture: "The museums occupy three buildings on Capitoline Hill: Palazzo dei Conservatori, Palazzo Nuovo, and Palazzo Senatorio, arranged around Michelangelo's Piazza del Campidoglio. An underground tunnel connects the buildings.",
+                    significance: "The collection includes iconic works such as the Capitoline Wolf, the equestrian statue of Marcus Aurelius, and the Dying Gaul. The museums showcase the artistic and cultural heritage of ancient Rome through sculptures, paintings, and archaeological finds.",
+                    preservation: "Recent renovations have modernized the exhibition spaces while respecting the historical architecture. Digital cataloging ensures the collection's accessibility to scholars worldwide."
+                }
+            },
+            {
+                name: "Baths of Caracalla",
+                lat: 41.8797,
+                lng: 12.4922,
+                category: "monument",
+                description: "Built between 212-216 AD, the Baths of Caracalla were one of the largest and most luxurious public baths in ancient Rome, accommodating up to 1,600 bathers.",
+                image: "carcala.jpg",
+                documentation: {
+                    history: "Emperor Caracalla constructed these baths between 212-216 AD to gain popularity with Roman citizens. The complex remained in use until the 6th century when invading Goths damaged the aqueducts supplying water.",
+                    architecture: "The bath complex covered 25 acres with the main building occupying 337 by 328 meters. It included hot rooms (caldarium), warm rooms (tepidarium), cold rooms (frigidarium), swimming pools, libraries, gardens, and exercise areas. The ruins still display impressive vaulted ceilings and mosaic floors.",
+                    significance: "The Baths of Caracalla exemplify Roman engineering prowess and the importance of bathing culture in Roman society. They featured advanced heating systems, extensive water management, and lavish decoration with marble, mosaics, and sculptures.",
+                    preservation: "Today, the site hosts summer opera performances among the atmospheric ruins. Ongoing archaeological work continues to reveal details about Roman daily life and engineering techniques."
+                }
+            }
+        ];
+
+        // Rome facts
+        const romeFacts = [
+            {
+                title: "The Colosseum's Hypogeum",
+                fact: "Beneath the Colosseum's arena floor was a complex two-level underground system called the hypogeum, featuring 80 vertical shafts, trap doors, and a sophisticated pulley system that allowed for dramatic entrances of gladiators and wild animals."
+            },
+            {
+                title: "Pantheon's Perfect Proportions",
+                fact: "The Pantheon's interior forms a perfect sphere - the height from the floor to the top of the dome is exactly equal to the diameter (43.3 meters). If you placed a sphere inside, it would fit perfectly."
+            },
+            {
+                title: "Roman Concrete Superiority",
+                fact: "Roman concrete, made with volcanic ash, actually gets stronger over time when exposed to seawater. Modern scientists are still studying this ancient recipe to create more durable modern concrete."
+            },
+            {
+                title: "Trevi Fountain Charity",
+                fact: "Approximately 3,000 euros are thrown into the Trevi Fountain every day. This money is collected nightly and donated to Caritas, a Catholic charity that helps Rome's needy."
+            },
+            {
+                title: "Vatican Museums' Marathon",
+                fact: "If you walked through all 54 galleries of the Vatican Museums without stopping, you would cover about 7 kilometers (4.3 miles). It would take approximately 4-5 hours at a brisk pace."
+            },
+            {
+                title: "Forum's Ancient Mall",
+                fact: "The Roman Forum wasn't just for politics - it was Rome's original shopping mall. Merchants sold everything from food and jewelry to slaves, and the area was so crowded that Julius Caesar had to ban wheeled traffic during the day."
+            },
+            {
+                title: "Castel Sant'Angelo's Secret Escape",
+                fact: "The Passetto di Borgo is a secret elevated corridor that connects the Vatican to Castel Sant'Angelo. Pope Clement VII used it to escape during the 1527 Sack of Rome, while his Swiss Guards sacrificed themselves to buy him time."
+            },
+            {
+                title: "Colosseum's Awning System",
+                fact: "The Colosseum featured a massive retractable awning called the velarium that protected spectators from the sun. It required a team of 1,000 sailors from the Roman navy to operate the ropes and pulleys."
+            },
+            {
+                title: "Baths of Caracalla's Luxury",
+                fact: "The Baths of Caracalla could accommodate 1,600 bathers at once and featured heated floors, two libraries, gardens, art galleries, restaurants, and even a hair salon - it was essentially Rome's first luxury spa resort."
+            },
+            {
+                title: "Capitoline Wolf Legend",
+                fact: "The famous bronze Capitoline Wolf statue, showing the she-wolf nursing Romulus and Remus, has been a symbol of Rome since ancient times. However, modern analysis suggests the wolf dates to medieval times, while the twins were added during the Renaissance."
+            },
+            {
+                title: "Pantheon's Oculus Rain",
+                fact: "The Pantheon's oculus (the circular opening at the top of the dome) is open to the elements. When it rains, water does fall through, but a sophisticated ancient drainage system in the floor quickly channels it away."
+            },
+            {
+                title: "Roman Forum's Arch of Titus",
+                fact: "The Arch of Titus in the Roman Forum depicts the treasures stolen from Jerusalem's Second Temple in 70 AD, including the sacred menorah. For centuries, many Jews avoided walking under this arch in protest."
+            },
+            {
+                title: "Sistine Chapel Creation Speed",
+                fact: "Michelangelo painted the Sistine Chapel ceiling in just four years (1508-1512), working on scaffolding high above the floor. Contrary to popular belief, he painted standing up, not lying down, which caused him severe neck and back pain."
+            },
+            {
+                title: "Roman Engineering Marvel",
+                fact: "The ancient Romans built over 400,000 kilometers (250,000 miles) of roads throughout their empire. Many modern European roads follow the exact same routes laid down by Roman engineers over 2,000 years ago."
+            },
+            {
+                title: "Colosseum's Naval Battles",
+                fact: "The Colosseum was occasionally flooded with water to stage mock naval battles called naumachiae. Engineers would fill the arena to a depth of about 5 feet, and miniature ships would engage in combat."
+            }
+        ];
+
+        let currentRoute = null;
+        let userLocation = null;
+        let locationCircle = null;
+
+        // Initialize map
+        const map = L.map('map').setView([41.8902, 12.4922], 14);
+		
+        // Base layers
+        const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles © Esri'
+        });
+
+        const terrainLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenTopoMap contributors'
+        });
+
+        let markers = [];
+
+        // Dark mode toggle
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const btn = document.getElementById('themeToggle');
+            btn.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+        }
+
+        // Add markers to map
+function addMarkers(filteredLocations = locations) {
+    markers.forEach(marker => map.removeLayer(marker));
+    markers = [];
+
+    filteredLocations.forEach(location => {
+        const marker = L.marker([location.lat, location.lng]).addTo(map);
+        
+        // Simplified popup with just essential quick info
+        const popupContent = `
+            <div class="popup-content">
+                <h3>${location.name}</h3>
+                <p><strong>${location.category.toUpperCase()}</strong></p>
+                <p class="coordinates">📍 ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}</p>
+                <button class="doc-btn" onclick="showDocumentation(${locations.indexOf(location)})">View Details</button>
+            </div>
+        `;
+        
+        marker.bindPopup(popupContent, {
+            maxWidth: 250,
+            autoPan: true,
+            autoPanPaddingTopLeft: [350, 50],
+            autoPanPaddingBottomRight: [50, 50]
+        });
+        
+        markers.push(marker);
+    });
+}
+        // Display location cards
+        function displayLocations(filteredLocations = locations) {
+            const locationList = document.getElementById('locationList');
+            locationList.innerHTML = '';
+
+            filteredLocations.forEach((location) => {
+                const card = document.createElement('div');
+                card.className = 'location-card';
+                card.innerHTML = `
+                    <h3>${location.name}</h3>
+                    <p><strong>${location.category.toUpperCase()}</strong></p>
+                    <p>${location.description.substring(0, 100)}...</p>
+                    <button class="doc-btn" onclick="showDocumentation(${locations.indexOf(location)}); event.stopPropagation();">View Documentation</button>
+                `;
+                card.onclick = () => {
+    const markerIndex = locations.indexOf(location);
+    if (markerIndex !== -1 && markers[markerIndex]) {
+        const lngOffset = 0.015; // Adjust LEFT/RIGHT position
+        const latOffset = 0.001; // Adjust UP/DOWN position
+        
+        // Subtract latOffset to shift map UP (marker appears DOWN)
+        map.setView([location.lat + latOffset, location.lng - lngOffset], 16);
+        
+        setTimeout(() => {
+            markers[markerIndex].openPopup();
+        }, 100);
+    }
+};
+                locationList.appendChild(card);
+            });
+        }
+
+        // Populate route selectors
+        function populateRouteSelectors() {
+            const startSelect = document.getElementById('startLocation');
+            const endSelect = document.getElementById('endLocation');
+
+            locations.forEach(location => {
+                const option1 = document.createElement('option');
+                option1.value = `${location.lat},${location.lng}`;
+                option1.textContent = location.name;
+                startSelect.appendChild(option1);
+
+                const option2 = document.createElement('option');
+                option2.value = `${location.lat},${location.lng}`;
+                option2.textContent = location.name;
+                endSelect.appendChild(option2);
+            });
+        }
+
+        // Search functionality
+        document.getElementById('searchBox').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filtered = locations.filter(loc => 
+                loc.name.toLowerCase().includes(searchTerm) || 
+                loc.description.toLowerCase().includes(searchTerm)
+            );
+            displayLocations(filtered);
+            addMarkers(filtered);
+        });
+
+        // Category filter
+        document.querySelectorAll('.category-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                const category = e.target.dataset.category;
+                const filtered = category === 'all' ? locations : locations.filter(loc => loc.category === category);
+                displayLocations(filtered);
+                addMarkers(filtered);
+            });
+        });
+
+       // Get route
+async function getRoute() {
+    const start = document.getElementById('startLocation').value;
+    const end = document.getElementById('endLocation').value;
+    
+    if (!start || !end) {
+        alert('Please select both start and end locations.');
+        return;
+    }
+    
+    if (start === end) {
+        alert('Start and end locations must be different.');
+        return;
+    }
+    
+    if (currentRoute) {
+        map.removeLayer(currentRoute);
+    }
+    
+    const [startLat, startLng] = start.split(',').map(Number);
+    const [endLat, endLng] = end.split(',').map(Number);
+    
+    const startLocation = locations.find(loc => loc.lat === startLat && loc.lng === startLng);
+    const endLocation = locations.find(loc => loc.lat === endLat && loc.lng === endLng);
+    
+    try {
+        // OSRM API for actual road routing (free, no key required)
+        const url = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?overview=full&geometries=geojson`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.routes && data.routes[0]) {
+            // Get coordinates from API response
+            const coords = data.routes[0].geometry.coordinates;
+            const latLngs = coords.map(coord => [coord[1], coord[0]]);
+            
+            // Draw route on map
+            currentRoute = L.polyline(latLngs, {
+                color: 'blue',
+                weight: 4,
+                opacity: 0.7
+            }).addTo(map);
+            
+            map.fitBounds(currentRoute.getBounds());
+            document.getElementById('clearRouteBtn').style.display = 'block';
+            
+            // Get accurate distance and time from API
+            const distance = data.routes[0].distance; // in meters
+            const duration = data.routes[0].duration; // in seconds
+            const driveTime = Math.round(duration / 60); // convert to minutes
+            const walkTime = Math.round(driveTime * 3); // walking is ~3x slower
+            
+            // Reuse existing facts modal
+            document.getElementById('factsContent').innerHTML = `
+                <div class="fact-card">
+                    <h4>📍 From: ${startLocation ? startLocation.name : 'Selected Point'}</h4>
+                </div>
+                <div class="fact-card">
+                    <h4>🎯 To: ${endLocation ? endLocation.name : 'Selected Point'}</h4>
+                </div>
+                <div class="fact-card">
+                    <h4>📏 Distance</h4>
+                    <p>${(distance / 1000).toFixed(2)} km</p>
+                </div>
+                <div class="fact-card">
+                    <h4>⏱️ Walking Time</h4>
+                    <p>${walkTime} minutes</p>
+                </div>
+                <div class="fact-card">
+                    <h4>🚗 Driving Time</h4>
+                    <p>${driveTime} minutes</p>
+                </div>
+            `;
+            
+            document.querySelector('#factsModal h2').textContent = '🗺️ Route Information';
+            document.getElementById('factsModal').style.display = 'flex';
+            document.querySelector('.refresh-facts-btn').style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Routing error:', error);
+        
+        // Fallback to straight line if API fails
+        currentRoute = L.polyline([
+            [startLat, startLng],
+            [endLat, endLng]
+        ], {
+            color: 'blue',
+            weight: 4,
+            opacity: 0.7
+        }).addTo(map);
+        
+        map.fitBounds(currentRoute.getBounds());
+        document.getElementById('clearRouteBtn').style.display = 'block';
+        
+        const distance = map.distance([startLat, startLng], [endLat, endLng]);
+        const walkTime = Math.round((distance / 1000) * 12);
+        const driveTime = Math.round(walkTime / 3);
+        
+        // Reuse existing facts modal
+        document.getElementById('factsContent').innerHTML = `
+            <div class="fact-card">
+                <h4>📍 From: ${startLocation ? startLocation.name : 'Selected Point'}</h4>
+            </div>
+            <div class="fact-card">
+                <h4>🎯 To: ${endLocation ? endLocation.name : 'Selected Point'}</h4>
+            </div>
+            <div class="fact-card">
+                <h4>📏 Distance</h4>
+                <p>${(distance / 1000).toFixed(2)} km (straight line)</p>
+            </div>
+            <div class="fact-card">
+                <h4>⏱️ Walking Time</h4>
+                <p>${walkTime} minutes (estimated)</p>
+            </div>
+            <div class="fact-card">
+                <h4>🚗 Driving Time</h4>
+                <p>${driveTime} minutes (estimated)</p>
+            </div>
+            <div class="fact-card">
+                <h4>⚠️ Note</h4>
+                <p>Route API unavailable. Showing straight-line estimate.</p>
+            </div>
+        `;
+        
+        document.querySelector('#factsModal h2').textContent = '🗺️ Route Information';
+        document.getElementById('factsModal').style.display = 'flex';
+        document.querySelector('.refresh-facts-btn').style.display = 'none';
+    }
+}
+        // Clear route
+       function clearRoute() {
+    if (currentRoute) {
+        map.removeLayer(currentRoute);
+        currentRoute = null;
+        document.getElementById('clearRouteBtn').style.display = 'none';
+        document.getElementById('startLocation').value = '';
+        document.getElementById('endLocation').value = '';
+        
+        // Show confirmation in facts modal instead of alert
+        document.getElementById('factsContent').innerHTML = `
+            <div class="fact-card">
+                <h4>✅ Route Cleared Successfully</h4>
+                <p>The route has been removed from the map.</p>
+            </div>
+        `;
+        document.querySelector('#factsModal h2').textContent = '🗺️ Route Cleared';
+        document.getElementById('factsModal').style.display = 'flex';
+        document.querySelector('.refresh-facts-btn').style.display = 'none';
+    }
+}
+
+        // Show documentation
+        function showDocumentation(index) {
+            const location = locations[index];
+            const doc = location.documentation;
+            
+            const docContent = `
+                <h2>${location.name}</h2>
+                <img src="${location.image}" alt="${location.name}">
+                
+                <div class="doc-section">
+                    <h3>📜 History</h3>
+                    <p>${doc.history}</p>
+                </div>
+                
+                <div class="doc-section">
+                    <h3>🏛️ Architecture</h3>
+                    <p>${doc.architecture}</p>
+                </div>
+                
+                <div class="doc-section">
+                    <h3>⭐ Significance</h3>
+                    <p>${doc.significance}</p>
+                </div>
+                
+                <div class="doc-section">
+                    <h3>🔧 Preservation</h3>
+                    <p>${doc.preservation}</p>
+                </div>
+                
+                <div class="doc-section">
+                    <p class="coordinates"><strong>Location:</strong> ${location.lat.toFixed(4)}°N, ${location.lng.toFixed(4)}°E</p>
+                    <p><strong>Category:</strong> ${location.category.charAt(0).toUpperCase() + location.category.slice(1)}</p>
+                </div>
+            `;
+            
+            document.getElementById('docContent').innerHTML = docContent;
+            document.getElementById('docModal').style.display = 'block';
+        }
+
+        // Close documentation modal
+        function closeDocModal() {
+            document.getElementById('docModal').style.display = 'none';
+        }
+
+        // Find nearby locations
+        function findNearby() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        userLocation = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        
+                        // Remove previous circle
+                        if (locationCircle) {
+                            map.removeLayer(locationCircle);
+                        }
+                        
+                        // Add circle around user location
+                        locationCircle = L.circle([userLocation.lat, userLocation.lng], {
+                            color: '#007bff',
+                            fillColor: '#007bff',
+                            fillOpacity: 0.2,
+                            radius: 2000
+                        }).addTo(map);
+                        
+                        // Add user marker
+                        L.marker([userLocation.lat, userLocation.lng], {
+                            icon: L.divIcon({
+                                className: 'user-location-marker',
+                                html: '📍',
+                                iconSize: [30, 30]
+                            })
+                        }).addTo(map).bindPopup('Your Location');
+                        
+                        map.setView([userLocation.lat, userLocation.lng], 13);
+                        
+                        // Calculate distances
+                        const nearbyLocations = locations.map(loc => {
+                            const distance = map.distance(
+                                [userLocation.lat, userLocation.lng],
+                                [loc.lat, loc.lng]
+                            );
+                            return { ...loc, distance };
+                        }).sort((a, b) => a.distance - b.distance);
+                        
+                        // Display nearby locations
+                        const nearbyList = document.getElementById('nearbyList');
+                        nearbyList.innerHTML = '';
+                        
+                        nearbyLocations.slice(0, 5).forEach(loc => {
+                            const item = document.createElement('div');
+                            item.className = 'nearby-item';
+                            item.innerHTML = `
+                                <h5>${loc.name}</h5>
+                                <p>Distance: ${(loc.distance / 1000).toFixed(2)} km</p>
+                                <p>${loc.category.toUpperCase()}</p>
+                            `;
+                            item.onclick = () => {
+                                map.setView([loc.lat, loc.lng], 15);
+                                const markerIndex = locations.indexOf(locations.find(l => l.name === loc.name));
+                                if (markers[markerIndex]) {
+                                    markers[markerIndex].openPopup();
+                                }
+                            };
+                            nearbyList.appendChild(item);
+                        });
+                        
+                        document.getElementById('nearbyPanel').style.display = 'block';
+                    },
+                    () => {
+                        alert('Unable to retrieve your location. Using Rome center as default.');
+                        userLocation = { lat: 41.8902, lng: 12.4922 };
+                        map.setView([userLocation.lat, userLocation.lng], 13);
+                    }
+                );
+            } else {
+                alert('Geolocation is not supported by your browser.');
+            }
+        }
+
+        // Show random facts
+        function showRandomFacts() {
+            document.getElementById('factsModal').style.display = 'block';
+            displayRandomFacts();
+        }
+
+        // Display random facts
+        function displayRandomFacts() {
+            const shuffled = [...romeFacts].sort(() => 0.5 - Math.random());
+            const selectedFacts = shuffled.slice(0, 5);
+            
+            const factsHTML = selectedFacts.map(fact => `
+                <div class="fact-card">
+                    <h4>${fact.title}</h4>
+                    <p>${fact.fact}</p>
+                </div>
+            `).join('');
+            
+            document.getElementById('factsContent').innerHTML = factsHTML;
+        }
+
+        // Refresh facts
+        function refreshFacts() {
+            displayRandomFacts();
+        }
+
+        // Close facts modal
+        function closeFactsModal() {
+    document.getElementById('factsModal').style.display = 'none';
+    document.querySelector('#factsModal h2').textContent = '🏛️ Fascinating Facts About Rome';
+    document.querySelector('.refresh-facts-btn').style.display = 'block';
+}
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const docModal = document.getElementById('docModal');
+            const factsModal = document.getElementById('factsModal');
+            if (event.target == docModal) {
+                docModal.style.display = 'none';
+            }
+            if (event.target == factsModal) {
+                factsModal.style.display = 'none';
+            }
+        }
+
+		  // Photo upload
+        function uploadPhotos() {
+            const fileInput = document.getElementById('photoUpload');
+            const files = fileInput.files;
+            
+            if (files.length > 0) {
+                alert(`Successfully uploaded ${files.length} photo(s)!\n\nFiles: ${Array.from(files).map(f => f.name).join(', ')}`);
+                fileInput.value = '';
+            } else {
+                alert('Please select photos to upload.');
+            }
+        }
+
+
+
+
+		
+        // Layer control
+        document.querySelectorAll('input[name="layer"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                map.removeLayer(streetLayer);
+                map.removeLayer(satelliteLayer);
+                map.removeLayer(terrainLayer);
+
+                switch(e.target.value) {
+                    case 'streets':
+                        streetLayer.addTo(map);
+                        break;
+                    case 'satellite':
+                        satelliteLayer.addTo(map);
+                        break;
+                    case 'terrain':
+                        terrainLayer.addTo(map);
+                        break;
+                }
+            });
+        });
+
+        // Initialize
+        addMarkers();
+        displayLocations();
+        populateRouteSelectors();
+    </script>
+</body>
+</html>
